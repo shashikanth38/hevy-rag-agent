@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: stg_sets
+    description: "Cleaned workout sets — normal and failure only"
+    columns:
+      - name: exercise_title
+        tests:
+          - not_null
+      - name: workout_date
+        tests:
+          - not_null
+      - name: set_index
+        tests:
+          - not_null
+      - name: weight_kg
+        tests:
+          - not_null
+      - name: reps
+        tests:
+          - not_null
+      - name: set_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['normal', 'failure']
+
+  - name: stg_sessions
+    description: "One row per workout session"
+    columns:
+      - name: workout_date
+        tests:
+          - not_null
+      - name: workout_title
+        tests:
+          - not_null
+      - name: total_sets
+        tests:
+          - not_null
+
+  - name: stg_measurements
+    description: "Cleaned body measurements"
+    columns:
+      - name: measurement_date
+        tests:
+          - not_null
+          - unique

@@ -1,0 +1,28 @@
+name: 'hevy_dbt'
+version: '1.0.0'
+config-version: 2
+
+profile: 'hevy_dbt'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  hevy_dbt:
+    bronze:
+      +schema: BRONZE
+      +materialized: view
+    silver:
+      +schema: SILVER
+      +materialized: incremental
+    gold:
+      +schema: GOLD
+      +materialized: table

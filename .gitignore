@@ -1,0 +1,12 @@
+.env
+rsa_key.p8
+rsa_key.pub
+data/chroma_db/
+data/hevy_export.csv
+data/profile.db
+__pycache__/
+.venv/
+*.pyc
+.DS_Store
+dbt/hevy_dbt/target/
+dbt/hevy_dbt/dbt_packages/

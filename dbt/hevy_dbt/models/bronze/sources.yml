@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: HEVY
+    schema: BRONZE
+    tables:
+      - name: raw_workouts
+        description: "Raw workout sets loaded from Hevy CSV and API"
+      - name: raw_measurements
+        description: "Raw body measurements from Hevy API"
+      - name: dim_exercise_templates
+        description: "Exercise templates with muscle groups from Hevy API"
+      - name: gym_locations
+        description: "Manual gym location timeline by date range"

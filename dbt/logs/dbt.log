@@ -1,0 +1,49 @@
+[0m18:15:32.999217 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10deb5550>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10deafa10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10dc4c250>]}
+
+
+============================== 18:15:33.001137 | fd596766-d1d6-4503-97b2-9bfbf07597e5 ==============================
+[0m18:15:33.001137 [info ] [MainThread]: Running with dbt=1.11.11
+[0m18:15:33.001361 [debug] [MainThread]: running dbt with arguments {'invocation_command': 'dbt init hevy_dbt', 'log_path': 'logs', 'empty': 'None', 'write_json': 'True', 'send_anonymous_usage_stats': 'True', 'introspect': 'True', 'log_format': 'default', 'warn_error': 'None', 'use_colors': 'True', 'profiles_dir': '/Users/shashikanthg/.dbt', 'static_parser': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'no_print': 'None', 'cache_selected_only': 'False', 'quiet': 'False', 'printer_width': '80', 'log_cache_events': 'False', 'indirect_selection': 'eager', 'fail_fast': 'False', 'target_path': 'None', 'partial_parse': 'True', 'use_experimental_parser': 'False', 'debug': 'False', 'version_check': 'True'}
+[0m18:15:33.008396 [debug] [MainThread]: Starter project path: /Users/shashikanthg/Documents/projects/rag_hevy/.venv/lib/python3.11/site-packages/dbt/include/starter_project
+[0m18:15:33.011240 [info ] [MainThread]: 
+Your new dbt project "hevy_dbt" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m18:15:33.011394 [info ] [MainThread]: Setting up your profile.
+[0m18:15:43.639131 [debug] [MainThread]: Snowflake adapter: Setting snowflake.connector to ERROR (file logging only)
+[0m18:15:43.639333 [debug] [MainThread]: Snowflake adapter: Setting botocore to ERROR (file logging only)
+[0m18:15:43.639450 [debug] [MainThread]: Snowflake adapter: Setting boto3 to ERROR (file logging only)
+[0m18:18:08.236501 [info ] [MainThread]: Profile hevy_dbt written to /Users/shashikanthg/.dbt/profiles.yml using target's profile_template.yml and your supplied values. Run 'dbt debug' to validate the connection.
+[0m18:18:08.239887 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 155.26826, "process_in_blocks": "0", "process_kernel_time": 0.190335, "process_mem_max_rss": "181518336", "process_out_blocks": "0", "process_user_time": 0.61708}
+[0m18:18:08.242482 [debug] [MainThread]: Command `dbt init` succeeded at 18:18:08.242279 after 155.27 seconds
+[0m18:18:08.243352 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10df57c10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10df57d90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105625f10>]}
+[0m18:18:08.243863 [debug] [MainThread]: Flushing usage events
+[0m18:18:10.321126 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m18:47:58.664219 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10b8ddb90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10b9c8ad0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10b674250>]}
+
+
+============================== 18:47:58.666825 | f5024c6e-3224-480a-9b56-66a63cffe440 ==============================
+[0m18:47:58.666825 [info ] [MainThread]: Running with dbt=1.11.11
+[0m18:47:58.667070 [debug] [MainThread]: running dbt with arguments {'use_colors': 'True', 'quiet': 'False', 'log_format': 'default', 'indirect_selection': 'eager', 'cache_selected_only': 'False', 'version_check': 'True', 'log_cache_events': 'False', 'write_json': 'True', 'use_experimental_parser': 'False', 'fail_fast': 'False', 'target_path': 'None', 'static_parser': 'True', 'send_anonymous_usage_stats': 'True', 'empty': 'False', 'introspect': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'partial_parse': 'True', 'log_path': 'logs', 'no_print': 'None', 'printer_width': '80', 'debug': 'False', 'invocation_command': 'dbt run --select stg_sets', 'profiles_dir': '/Users/shashikanthg/.dbt', 'warn_error': 'None'}
+[0m18:47:58.667312 [error] [MainThread]: Encountered an error:
+Runtime Error
+  No dbt_project.yml found at expected path /Users/shashikanthg/Documents/projects/rag_hevy/hevy-rag-agent/dbt/dbt_project.yml
+  Verify that each entry within packages.yml (and their transitive dependencies) contains a file named dbt_project.yml
+  
+[0m18:47:58.667533 [debug] [MainThread]: Resource report: {"command_name": "run", "command_success": false, "command_wall_clock_time": 0.036581706, "process_in_blocks": "0", "process_kernel_time": 0.108831, "process_mem_max_rss": "115195904", "process_out_blocks": "0", "process_user_time": 0.416952}
+[0m18:47:58.667704 [debug] [MainThread]: Command `dbt run` failed at 18:47:58.667672 after 0.04 seconds
+[0m18:47:58.667844 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10b9cbed0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x102668e10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10b8d7f10>]}
+[0m18:47:58.667976 [debug] [MainThread]: Flushing usage events
+[0m18:48:00.598200 [debug] [MainThread]: An error was encountered while trying to flush usage events
