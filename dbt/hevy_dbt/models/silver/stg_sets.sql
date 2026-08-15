@@ -95,6 +95,7 @@ cleaned AS (
                 WHEN LOWER(description)    LIKE '%vr fitness%'      THEN 'vr_fitness'
                 WHEN LOWER(description)    LIKE '%blr%'             THEN 'blr_other'
                 WHEN LOWER(description)    LIKE '%pune%'            THEN 'pune_other'
+                WHEN LOWER(description)    LIKE '%cult%'            THEN 'cult'
                 ELSE NULL
             END,
             CASE
@@ -104,6 +105,7 @@ cleaned AS (
                 WHEN LOWER(exercise_notes) LIKE '%vr fitness%'      THEN 'vr_fitness'
                 WHEN LOWER(exercise_notes) LIKE '%blr%'             THEN 'blr_other'
                 WHEN LOWER(exercise_notes) LIKE '%pune%'            THEN 'pune_other'
+                WHEN LOWER(description)    LIKE '%cult%'            THEN 'cult'
                 ELSE NULL
             END
         )                                                           AS gym_detail_from_description,
@@ -112,6 +114,7 @@ cleaned AS (
             WHEN LOWER(description)        LIKE '%thrive%'          THEN 'chennai'
             WHEN LOWER(description)        LIKE '%cult chennai%'    THEN 'chennai'
             WHEN LOWER(description)        LIKE '%afterburn%'       THEN 'hyd'
+            WHEN LOWER(description)        LIKE '%cult%'            THEN 'hyd   '
             WHEN LOWER(description)        LIKE '%vr fitness%'      THEN 'hyd'
             WHEN LOWER(description)        LIKE '%blr%'             THEN 'blr_other'
             WHEN LOWER(description)        LIKE '%pune%'            THEN 'pune_other'
@@ -160,6 +163,7 @@ SELECT
     COALESCE(gym_detail_from_description, gl_gym_detail)     AS gym_detail,
     COALESCE(gym_from_description, gl_gym)                   AS gym,
     (gl_gym IS NOT NULL OR gym_from_description IS NOT NULL) AS is_gym_known,
+    exercise_notes,
     _source,
     _loaded_at
 FROM joined

@@ -14,22 +14,6 @@ models:
         tests:
           - not_null
 
-  - name: pr_tracking
-    description: "Personal records per exercise per gym"
-    columns:
-      - name: exercise_title
-        tests:
-          - not_null
-      - name: gym_detail
-        tests:
-          - name: gym_detail
-        tests:
-          - not_null:
-              config:
-                severity: warn
-      - name: max_weight_kg
-        tests:
-          - not_null
 
   - name: fatigue_index
     description: "7d vs 28d rolling tonnage ratio"
@@ -38,5 +22,27 @@ models:
         tests:
           - not_null
       - name: fatigue_index
+        tests:
+          - not_null
+  - name: strength_progression
+    description: "Estimated 1RM trend, plateau detection, and PR prediction per exercise per gym"
+    columns:
+      - name: workout_date
+        tests:
+          - not_null
+      - name: exercise_title
+        tests:
+          - not_null
+      - name: gym_detail
+        tests:
+          - not_null
+
+  - name: muscle_balance
+    description: "Weekly push/pull/leg balance, MEV/MAV flags, and muscle neglect alerts per gym"
+    columns:
+      - name: week_start
+        tests:
+          - not_null
+      - name: gym_detail
         tests:
           - not_null
