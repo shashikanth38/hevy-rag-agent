@@ -2,47 +2,59 @@ version: 2
 
 models:
   - name: stg_sets
-    description: "Cleaned workout sets — normal and failure only"
+    description: >
+      One row per working set (normal + failure + dropset; warmups excluded).
+      Grain is [workout_id, exercise_title, set_index, set_occurrence].
+      The exercise dimension is joined here so all gold models agree on
+      muscle and equipment.
     columns:
+      - name: workout_id
+        tests: [not_null]
       - name: exercise_title
-        tests:
-          - not_null
-      - name: workout_date
-        tests:
-          - not_null
+        tests: [not_null]
       - name: set_index
-        tests:
-          - not_null
-      - name: weight_kg
-        tests:
-          - not_null
+        tests: [not_null]
+      - name: set_occurrence
+        tests: [not_null]
+      - name: workout_date
+        tests: [not_null]
       - name: reps
-        tests:
-          - not_null
+        tests: [not_null]
+      - name: tonnage
+        tests: [not_null]
+      - name: primary_muscle
+        tests: [not_null]
+      - name: equipment_category
+        tests: [not_null]
       - name: set_type
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['normal', 'failure']
+                values: ['normal', 'failure', 'dropset']
 
   - name: stg_sessions
-    description: "One row per workout session"
+    description: "One row per workout session, keyed on workout_id"
     columns:
+      - name: workout_id
+        tests: [not_null, unique]
       - name: workout_date
-        tests:
-          - not_null
-      - name: workout_title
-        tests:
-          - not_null
+        tests: [not_null]
       - name: total_sets
-        tests:
-          - not_null
+        tests: [not_null]
 
   - name: stg_measurements
-    description: "Cleaned body measurements"
+    description: "Cleaned body measurements. body_fat_pct is empty in all rows."
     columns:
       - name: measurement_date
-        tests:
-          - not_null
-          - unique
+        tests: [not_null, unique]
+
+  - name: stg_bodyweight_daily
+    description: >
+      Daily bodyweight, linearly interpolated between the ~39 readings so
+      bodyweight-relative metrics have a value on every training day.
+    columns:
+      - name: workout_date
+        tests: [not_null, unique]
+      - name: bodyweight_kg
+        tests: [not_null]

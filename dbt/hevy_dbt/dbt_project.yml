@@ -15,11 +15,19 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+seeds:
+  hevy_dbt:
+    +schema: BRONZE
+    muscle_landmarks:
+      +column_types:
+        muscle: VARCHAR
+        movement_group: VARCHAR
+        mev_sets: NUMBER(3,0)
+        mav_sets: NUMBER(3,0)
+        mrv_sets: NUMBER(3,0)
+
 models:
   hevy_dbt:
-    bronze:
-      +schema: BRONZE
-      +materialized: view
     silver:
       +schema: SILVER
       +materialized: incremental
