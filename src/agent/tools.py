@@ -357,8 +357,14 @@ def chromadb_tool(question: str, k: int = 4) -> list[dict]:
         embedding_function = embeddings,
         persist_directory  = CHROMA_PATH,
     )
+    RELEVANCE_THRESHOLD = 0.6 
+    results = vector_store.similarity_search_with_relevance_scores(question, k=k*2)
+    for doc, score in results:
+        mark = "keep" if score > RELEVANCE_THRESHOLD else "drop"
+        print(f"  {score:.3f} {mark}  {doc.metadata.get('title', '')[:70]}")
 
-    docs = vector_store.similarity_search(question, k=k)
+    kept = [(doc, score) for doc, score in results if score > RELEVANCE_THRESHOLD][:k]
+    print(f"ChromaDB: {len(results)} candidates · {len(kept)} above {RELEVANCE_THRESHOLD}")
 
     return [
         {
@@ -366,6 +372,7 @@ def chromadb_tool(question: str, k: int = 4) -> list[dict]:
             "content": doc.page_content,
             "source":  doc.metadata.get("source", ""),
             "pmid":    doc.metadata.get("pmid", ""),
+            "score":   round(score, 3),
         }
-        for doc in docs
+        for doc, score in kept
     ]

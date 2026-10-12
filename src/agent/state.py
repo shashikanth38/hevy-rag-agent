@@ -1,6 +1,8 @@
 # src/agent/state.py
 from typing import TypedDict, Any
 
+from pydantic import Field
+
 
 class AgentState(TypedDict):
     # input
@@ -14,7 +16,10 @@ class AgentState(TypedDict):
     sql_attempts: int        # number of attempts made to run the SQL query
     data_notes:  list[str]  # notes about the SQL query after execution
     paper_chunks: list[dict]  # list of dicts not str — each has title, content, source, pmid
-
+    sources_used: list[int] = Field(
+        description="The numbers of the papers you actually drew on, e.g. [1, 3]. "
+                    "Empty list if you used none."
+        )  # list of sources used to answer the question (e.g., ["snowflake", "papers"])
     # output
     answer:       str
     citations:    list[dict]  # list of dicts not str — each has title, source, pmid

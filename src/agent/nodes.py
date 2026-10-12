@@ -22,11 +22,19 @@ class AgentResponse(BaseModel):
         description="Relevant stats from the user's training data, or 'No data retrieved' if none"
     )
     evidence: str = Field(
-        description="Supporting evidence from research papers, or 'No papers retrieved' if none"
+        description="Supporting evidence from the numbered research papers, citing them "
+                    "inline as [1], [2]. 'No papers retrieved' if none were provided, or "
+                    "'The research corpus does not cover this' if none were relevant."
     )
     action: str = Field(
         description="One specific actionable next step for the user"
     )
+    sources_used: list[int] = Field(
+        default_factory=list,
+        description="Numbers of the papers you actually drew on, e.g. [1, 3]. "
+                    "Empty list if you used none of them.",
+    )
+
 
 def derive_confidence(state: AgentState) -> str:
     tools        = state.get("tools_to_use", [])
@@ -248,6 +256,26 @@ def check_sql(state: AgentState) -> str:
         return "repair"
 
     return "continue"
+def select_citations(sources_used: list, paper_chunks: list[dict]) -> list[dict]:
+    """
+    Keep only whole numbers in 1..len(paper_chunks), remove duplicates, sort,
+    then look up the real paper. Each citation keeps its original number.
+    """
+    n = len(paper_chunks)
+    valid = sorted({
+        i for i in (sources_used or [])
+        if isinstance(i, int) and not isinstance(i, bool) and 1 <= i <= n
+    })
+    return [
+        {
+            "index":  i,
+            "title":  paper_chunks[i - 1]["title"],
+            "source": paper_chunks[i - 1]["source"],
+            "pmid":   paper_chunks[i - 1]["pmid"],
+        }
+        for i in valid
+    ]
+
 
 def synthesis(state: AgentState) -> AgentState:
     """
@@ -301,13 +329,13 @@ SQL: {sql_results.get('sql', '')}{notes_line}
 
 NOTHING WAS RETRIEVED — no training data and no research papers.
 You have no grounds to answer. Do not answer from your own knowledge.
-Reply that you could not retrieve anything for this question, ask the user to
-rephrase it in terms of their training, and set confidence to low."""
+Reply that you could not retrieve anything for this question, and ask the user to
+rephrase it in terms of their training."""
 
     if paper_chunks:
         papers_context = "\n\n".join([
-            f"Paper: {p['title']}\n{p['content'][:500]}\nSource: {p['source']}"
-            for p in paper_chunks
+            f"[{i}] {p['title']}\n{p['content'][:500]}"
+            for i, p in enumerate(paper_chunks, 1)
         ])
     else:
         papers_context = "No research papers retrieved."
@@ -321,12 +349,17 @@ Answer the user's question using their personal training data and/or research pa
 
 Guidelines:
 - Be specific and reference actual numbers from their data
-- Cite research papers when used
+- Research papers are NUMBERED. Cite them inline by number in `evidence`,
+  e.g. "higher frequency improved hypertrophy [2]".
+- List in `sources_used` ONLY the numbers of papers whose content you actually
+  used. If you used none of them, return an empty list.
+- State a research finding only if it appears in the papers below. If they do not
+  address the question, say the research corpus does not cover it — never answer
+  from your own general knowledge.
 - Be concise but complete
 - If data is missing, say so clearly
 - Distinguish "the query failed" from "the user has no data" — never report a
   retrieval failure as an absence of training history
-- Set confidence to low whenever the data query failed or returned no rows
 - End with one actionable recommendation
         """),
         ("human", """
@@ -341,15 +374,15 @@ Research papers:
 
     chain    = prompt | structured_llm
     response = chain.invoke({
+        "history":          format_history(state.get("history") or []),
         "question":        state["resolved_question"],
         "data_context":    data_context,
         "papers_context":  papers_context,
     })
 
-    citations = [
-        {"title": p["title"], "source": p["source"], "pmid": p["pmid"]}
-        for p in paper_chunks
-    ]
+    citations = select_citations(response.sources_used, paper_chunks)
+    print(f"Papers: {len(paper_chunks)} retrieved · {len(citations)} cited "
+          f"(model said {response.sources_used})")
 
     return {
         **state,

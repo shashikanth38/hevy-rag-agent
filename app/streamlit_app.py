@@ -192,11 +192,16 @@ def render_response(result: dict) -> None:
     # citations
     if result.get("citations"):
         st.markdown("<p class='section-header'>Citations</p>", unsafe_allow_html=True)
+        # The number is the one the answer text cites as [n], so it is shown
+        # as-is and never renumbered — otherwise [2] in the prose would point
+        # at a different paper than [2] in this list.
         for c in result["citations"]:
+            label  = f"[{c['index']}] " if c.get("index") else ""
             title  = esc(c.get("title", "")[:80])
             source = esc(c.get("source", ""))
             st.markdown(
-                f"<div class='citation'>📄 <a href='{source}' target='_blank'>{title}</a></div>",
+                f"<div class='citation'>📄 {esc(label)}"
+                f"<a href='{source}' target='_blank'>{title}</a></div>",
                 unsafe_allow_html=True,
             )
 
