@@ -8,6 +8,150 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_chroma import Chroma
 from src.db.snowflake_client import get_conn
 
+# ── SQL LLM ────────────────────────────────────
+sql_llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    api_key=OPENAI_API_KEY,
+    temperature=0,
+)
+#-── Helper functions ────────────────────────────────────────────────────────────
+def repair_sql(question: str, failed_sql: str, error: str) -> str:
+    """
+    Fix a query that Snowflake rejected.
+    The LLM sees the schema, the exact SQL that failed, and the verbatim error.
+    """
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", f"""
+You are a Snowflake SQL expert. A query failed. Fix it.
+Use only the tables and columns described below.
+Change only what the error requires; keep the rest of the query the same.
+Return ONLY the corrected SQL query, nothing else.
+No markdown, no explanation, no backticks.
+
+{GOLD_SCHEMA_CONTEXT}
+        """),
+        ("human", """
+Question: {question}
+
+SQL that failed:
+{failed_sql}
+
+Snowflake error:
+{error}
+        """),
+    ])
+    chain = prompt | sql_llm | StrOutputParser()
+    return clean_sql(chain.invoke({
+        "question":   question,
+        "failed_sql": failed_sql,
+        "error":      error,
+    }))
+
+def clean_sql(sql: str) -> str:
+    """Strip markdown fences the LLM sometimes adds despite instructions."""
+    sql = sql.strip()
+    sql = re.sub(r"^```(?:sql)?\s*", "", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\s*```$", "", sql)
+    return sql.strip().rstrip(";")
+
+def classify_question(question: str) -> str:
+    """
+    Route a question to the template whose grain matches it.
+
+    Order matters: the most specific intent is checked first. "What did I do
+    last session?" must reach raw_sets before the word "session" sends it to
+    the session-frequency template.
+
+    Two matchers, deliberately:
+      has()  exact word match, for short or ambiguous tokens. A substring
+             test for "pr" also fires on "progress" and "press".
+      stem() prefix match, so "progress" also catches "progressed" and
+             "progressing". Only safe for longer, unambiguous stems.
+    """
+    q = question.lower()
+
+    def has(*words: str) -> bool:
+        return any(re.search(r"\b" + re.escape(w) + r"\b", q) for w in words)
+
+    def stem(*stems: str) -> bool:
+        return any(re.search(r"\b" + re.escape(st) + r"\w*", q) for st in stems)
+
+    # individual sets from a specific recent session
+    if has("last workout", "last session", "yesterday", "what did i do",
+           "sets i did", "today's workout"):
+        return "raw_sets"
+
+    # all-time bests — exact match only, "pr" is a substring of many words
+    if has("pr", "prs", "1rm", "personal record", "personal best",
+           "heaviest", "max weight", "best lift", "one rep max"):
+        return "pr"
+
+    # recovery and training load
+    if stem("overtrain", "deload", "fatigue", "recover", "burnout") \
+       or has("tired", "rest day", "should i rest", "burnt out", "burned out"):
+        return "fatigue"
+
+    # strength trend over time
+    if stem("stronger", "progress", "plateau", "improv", "gain", "e1rm") \
+       or has("getting stronger"):
+        return "strength"
+
+    # naming specific muscles needs the per-muscle grain, not the weekly
+    # rollup: fct_training_week only counts how many are below MEV,
+    # fct_muscle_week says which ones
+    if stem("neglect") or has("which muscle", "which muscles",
+                              "what muscle", "what muscles"):
+        return "volume"
+
+    # split structure and push/pull symmetry
+    if stem("balance", "imbalance", "symmetr") \
+       or has("push", "pull", "ratio", "split"):
+        return "balance"
+
+    # per-muscle weekly volume
+    if stem("volume", "hypertroph", "grow") \
+       or has("sets", "enough", "mev", "mav"):
+        return "volume"
+
+    # training frequency and consistency
+    if stem("session", "frequen", "consisten") \
+       or has("how often", "last week", "recent", "this week"):
+        return "sessions"
+
+    return "llm"
+
+def generate_sql(question: str) -> str:
+    llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            api_key=OPENAI_API_KEY,
+            temperature=0,
+        )
+    prompt = ChatPromptTemplate.from_messages([
+            ("system", f"""
+            You are a Snowflake SQL expert. Generate a single SQL query to answer the user's question.
+            Use only the tables described below. Return ONLY the SQL query, nothing else.
+            No markdown, no explanation, no backticks.
+        {GOLD_SCHEMA_CONTEXT}
+        """),
+        ("human", "{question}"),
+    ])
+    chain = prompt | llm | StrOutputParser()
+    return clean_sql(chain.invoke({"question": question}))
+
+def run_sql(sql: str) -> dict:
+    """
+    Executes the SQL query and returns results or error.
+    """
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            columns = [col[0] for col in cur.description]
+            rows = cur.fetchall()
+            results = [dict(zip(columns, row)) for row in rows]
+        return {"sql": sql, "results": results, "error": None}
+    except Exception as e:
+        return {"sql": sql, "results": None, "error": str(e)}
 
 # ── Schema context for LLM SQL generation ────────────────────────────────────
 
@@ -102,7 +246,6 @@ BEFORE writing SQL, identify which category the question falls into and apply
 the date filter. This is mandatory.
 """
 
-
 # ── Query templates ───────────────────────────────────────────────────────────
 
 QUERY_TEMPLATES = {
@@ -180,74 +323,6 @@ QUERY_TEMPLATES = {
     """,
 }
 
-
-def classify_question(question: str) -> str:
-    """
-    Route a question to the template whose grain matches it.
-
-    Order matters: the most specific intent is checked first. "What did I do
-    last session?" must reach raw_sets before the word "session" sends it to
-    the session-frequency template.
-
-    Two matchers, deliberately:
-      has()  exact word match, for short or ambiguous tokens. A substring
-             test for "pr" also fires on "progress" and "press".
-      stem() prefix match, so "progress" also catches "progressed" and
-             "progressing". Only safe for longer, unambiguous stems.
-    """
-    q = question.lower()
-
-    def has(*words: str) -> bool:
-        return any(re.search(r"\b" + re.escape(w) + r"\b", q) for w in words)
-
-    def stem(*stems: str) -> bool:
-        return any(re.search(r"\b" + re.escape(st) + r"\w*", q) for st in stems)
-
-    # individual sets from a specific recent session
-    if has("last workout", "last session", "yesterday", "what did i do",
-           "sets i did", "today's workout"):
-        return "raw_sets"
-
-    # all-time bests — exact match only, "pr" is a substring of many words
-    if has("pr", "prs", "1rm", "personal record", "personal best",
-           "heaviest", "max weight", "best lift", "one rep max"):
-        return "pr"
-
-    # recovery and training load
-    if stem("overtrain", "deload", "fatigue", "recover", "burnout") \
-       or has("tired", "rest day", "should i rest", "burnt out", "burned out"):
-        return "fatigue"
-
-    # strength trend over time
-    if stem("stronger", "progress", "plateau", "improv", "gain", "e1rm") \
-       or has("getting stronger"):
-        return "strength"
-
-    # naming specific muscles needs the per-muscle grain, not the weekly
-    # rollup: fct_training_week only counts how many are below MEV,
-    # fct_muscle_week says which ones
-    if stem("neglect") or has("which muscle", "which muscles",
-                              "what muscle", "what muscles"):
-        return "volume"
-
-    # split structure and push/pull symmetry
-    if stem("balance", "imbalance", "symmetr") \
-       or has("push", "pull", "ratio", "split"):
-        return "balance"
-
-    # per-muscle weekly volume
-    if stem("volume", "hypertroph", "grow") \
-       or has("sets", "enough", "mev", "mav"):
-        return "volume"
-
-    # training frequency and consistency
-    if stem("session", "frequen", "consisten") \
-       or has("how often", "last week", "recent", "this week"):
-        return "sessions"
-
-    return "llm"
-
-
 # ── Snowflake tool ────────────────────────────────────────────────────────────
 
 def snowflake_tool(question: str) -> dict:
@@ -261,46 +336,10 @@ def snowflake_tool(question: str) -> dict:
         sql = QUERY_TEMPLATES[template_key]
         print(f"Using template: {template_key}")
     else:
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            api_key=OPENAI_API_KEY,
-            temperature=0,
-        )
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", f"""
-You are a Snowflake SQL expert. Generate a single SQL query to answer the user's question.
-Use only the tables described below. Return ONLY the SQL query, nothing else.
-No markdown, no explanation, no backticks.
+        sql = generate_sql(question)
+        print(f"Using LLM-generated SQL for question: {question}")
 
-{GOLD_SCHEMA_CONTEXT}
-            """),
-            ("human", "{question}"),
-        ])
-        chain = prompt | llm | StrOutputParser()
-        sql   = chain.invoke({"question": question}).strip()
-        print(f"LLM-generated SQL:\n{sql}\n")
-
-    try:
-        conn   = get_conn()
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        columns = [desc[0] for desc in cursor.description]
-        rows    = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return {
-            "sql":     sql,
-            "results": [dict(zip(columns, row)) for row in rows],
-            "error":   None,
-        }
-
-    except Exception as e:
-        return {
-            "sql":     sql,
-            "results": [],
-            "error":   str(e),
-        }
-
+    return run_sql(sql)
 
 # ── ChromaDB tool ─────────────────────────────────────────────────────────────
 
